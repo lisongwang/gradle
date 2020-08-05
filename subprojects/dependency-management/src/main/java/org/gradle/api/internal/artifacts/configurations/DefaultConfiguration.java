@@ -195,7 +195,6 @@ public class DefaultConfiguration extends AbstractFileCollection implements Conf
     private final Set<Object> excludeRules = new LinkedHashSet<>();
     private Set<ExcludeRule> parsedExcludeRules;
 
-    private final ProjectStateRegistry.SafeExclusiveLock resolutionLock;
     private final Object observationLock = new Object();
     private volatile InternalState observedState = UNRESOLVED;
     private boolean insideBeforeResolve;
@@ -266,7 +265,6 @@ public class DefaultConfiguration extends AbstractFileCollection implements Conf
         this.domainObjectContext = domainObjectContext;
         this.intrinsicFiles = new ConfigurationFileCollection(Specs.satisfyAll());
         this.documentationRegistry = documentationRegistry;
-        this.resolutionLock = projectStateRegistry.newExclusiveOperationLock();
         this.resolvableDependencies = instantiator.newInstance(ConfigurationResolvableDependencies.class, this);
 
         displayName = Describables.memoize(new ConfigurationDescription(identityPath));
@@ -568,8 +566,7 @@ public class DefaultConfiguration extends AbstractFileCollection implements Conf
                     .willBeRemovedInGradle7()
                     .withUserManual("viewing_debugging_dependencies", "sub:resolving-unsafe-configuration-resolution-errors")
                     .nagUser();
-                owner.getModel().withLenientState(() -> resolveExclusively(requestedState));
-                return currentResolveState.get();
+                return resolveExclusively(requestedState);
             }
         } else {
             return resolveExclusively(requestedState);
@@ -586,7 +583,7 @@ public class DefaultConfiguration extends AbstractFileCollection implements Conf
     }
 
     private ResolveState resolveExclusively(InternalState requestedState) {
-        resolutionLock.withLock(() -> {
+        owner.getModel().withMutableState(() -> {
             if (requestedState == GRAPH_RESOLVED || requestedState == ARTIFACTS_RESOLVED) {
                 resolveGraphIfRequired(requestedState, currentResolveState.get());
             }
