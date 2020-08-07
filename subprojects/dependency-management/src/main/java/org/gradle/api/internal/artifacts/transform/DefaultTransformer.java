@@ -58,6 +58,8 @@ import org.gradle.internal.instantiation.InstantiationScheme;
 import org.gradle.internal.isolated.IsolationScheme;
 import org.gradle.internal.isolation.Isolatable;
 import org.gradle.internal.isolation.IsolatableFactory;
+import org.gradle.internal.model.CalculatedModelValue;
+import org.gradle.internal.model.ModelContainer;
 import org.gradle.internal.operations.BuildOperationContext;
 import org.gradle.internal.operations.BuildOperationDescriptor;
 import org.gradle.internal.operations.BuildOperationExecutor;
@@ -101,7 +103,7 @@ public class DefaultTransformer extends AbstractTransformer<TransformAction<?>> 
     private final InstanceFactory<? extends TransformAction<?>> instanceFactory;
     private final boolean cacheable;
 
-    private IsolatedParameters isolatedParameters;
+    private final CalculatedModelValue<IsolatedParameters> isolatedParameters;
 
     public DefaultTransformer(
         Class<? extends TransformAction<?>> implementationClass,
@@ -119,11 +121,12 @@ public class DefaultTransformer extends AbstractTransformer<TransformAction<?>> 
         FileLookup fileLookup,
         PropertyWalker parameterPropertyWalker,
         InstantiationScheme actionInstantiationScheme,
+        ModelContainer owner,
         ServiceLookup internalServices
     ) {
         super(implementationClass, fromAttributes);
         this.parameterObject = parameterObject;
-        this.isolatedParameters = isolatedParameters;
+        this.isolatedParameters = owner.newCalculatedValue(isolatedParameters);
         this.fileNormalizer = inputArtifactNormalizer;
         this.dependenciesNormalizer = dependenciesNormalizer;
         this.buildOperationExecutor = buildOperationExecutor;
@@ -163,7 +166,7 @@ public class DefaultTransformer extends AbstractTransformer<TransformAction<?>> 
 
     @Override
     public boolean isIsolated() {
-        return isolatedParameters != null;
+        return isolatedParameters.getOrNull() != null;
     }
 
     @Override
@@ -209,7 +212,12 @@ public class DefaultTransformer extends AbstractTransformer<TransformAction<?>> 
     @Override
     public void isolateParameters(FileCollectionFingerprinterRegistry fingerprinterRegistry) {
         try {
-            isolatedParameters = doIsolateParameters(fingerprinterRegistry);
+            isolatedParameters.update(current -> {
+                if (current != null) {
+                    throw new IllegalStateException("Transform parameters are already isolated.");
+                }
+                return doIsolateParameters(fingerprinterRegistry);
+            });
         } catch (Exception e) {
             throw new VariantTransformConfigurationException(String.format("Cannot isolate parameters %s of artifact transform %s", parameterObject, ModelType.of(getImplementationClass()).getDisplayName()), e);
         }
@@ -339,10 +347,7 @@ public class DefaultTransformer extends AbstractTransformer<TransformAction<?>> 
     }
 
     public IsolatedParameters getIsolatedParameters() {
-        if (isolatedParameters == null) {
-            throw new IllegalStateException("The parameters of " + getDisplayName() + "need to be isolated first!");
-        }
-        return isolatedParameters;
+        return isolatedParameters.get();
     }
 
     private static class TransformServiceLookup implements ServiceLookup {

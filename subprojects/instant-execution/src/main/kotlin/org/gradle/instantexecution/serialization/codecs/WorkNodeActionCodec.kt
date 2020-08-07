@@ -16,21 +16,36 @@
 
 package org.gradle.instantexecution.serialization.codecs
 
+import org.gradle.api.Project
+import org.gradle.api.internal.artifacts.configurations.DefaultConfiguration
+import org.gradle.api.internal.tasks.NodeExecutionContext
 import org.gradle.api.internal.tasks.WorkNodeAction
-import org.gradle.execution.plan.ActionNode
 import org.gradle.instantexecution.serialization.Codec
 import org.gradle.instantexecution.serialization.ReadContext
 import org.gradle.instantexecution.serialization.WriteContext
-import org.gradle.instantexecution.serialization.readNonNull
+import org.gradle.instantexecution.serialization.logNotImplemented
 
 
-object ActionNodeCodec : Codec<ActionNode> {
-    override suspend fun WriteContext.encode(value: ActionNode) {
-        write(value.action)
+object WorkNodeActionCodec : Codec<WorkNodeAction> {
+    override suspend fun WriteContext.encode(value: WorkNodeAction) {
+        if (value is DefaultConfiguration.ResolveGraphAction) {
+            // Can ignore
+            return
+        } else {
+            logNotImplemented(value.javaClass)
+        }
     }
 
-    override suspend fun ReadContext.decode(): ActionNode? {
-        val action = readNonNull<WorkNodeAction>()
-        return ActionNode(action)
+    override suspend fun ReadContext.decode(): WorkNodeAction {
+        // TODO - should discard from graph instead
+        return object : WorkNodeAction {
+            override fun run(context: NodeExecutionContext) {
+                // Ignore
+            }
+
+            override fun getProject(): Project? {
+                return null
+            }
+        }
     }
 }

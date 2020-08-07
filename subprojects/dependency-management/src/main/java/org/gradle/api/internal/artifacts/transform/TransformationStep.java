@@ -29,7 +29,6 @@ import org.gradle.api.internal.tasks.TaskDependencyResolveContext;
 import org.gradle.api.internal.tasks.WorkNodeAction;
 import org.gradle.internal.Try;
 import org.gradle.internal.fingerprint.FileCollectionFingerprinterRegistry;
-import org.gradle.internal.model.ModelContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,32 +49,13 @@ public class TransformationStep implements Transformation, TaskDependencyContain
     private final WorkNodeAction isolateAction;
     private final ProjectInternal owningProject;
     private final FileCollectionFingerprinterRegistry globalFingerprinterRegistry;
-    private final ModelContainer owner;
 
     public TransformationStep(Transformer transformer, TransformerInvocationFactory transformerInvocationFactory, DomainObjectContext owner, FileCollectionFingerprinterRegistry globalFingerprinterRegistry) {
         this.transformer = transformer;
         this.transformerInvocationFactory = transformerInvocationFactory;
         this.globalFingerprinterRegistry = globalFingerprinterRegistry;
         this.owningProject = owner.getProject();
-        this.owner = owner.getModel();
-        this.isolateAction = transformer.isIsolated() ? null : new WorkNodeAction() {
-            @Override
-            public String toString() {
-                return "isolate parameters of transform " + transformer.getDisplayName();
-            }
-
-            @Nullable
-            @Override
-            public Project getProject() {
-                return owningProject;
-            }
-
-            @Override
-            public void run(NodeExecutionContext context) {
-                FileCollectionFingerprinterRegistry fingerprinterRegistry = context.getService(FileCollectionFingerprinterRegistry.class);
-                isolateTransformerParameters(fingerprinterRegistry);
-            }
-        };
+        this.isolateAction = transformer.isIsolated() ? null : new IsolateTransformerParametersNode(this);
     }
 
     public Transformer getTransformer() {
@@ -145,11 +125,7 @@ public class TransformationStep implements Transformation, TaskDependencyContain
 
     private void isolateTransformerParameters(FileCollectionFingerprinterRegistry fingerprinterRegistry) {
         if (!transformer.isIsolated()) {
-            if (!owner.hasMutableState()) {
-                throw new IllegalStateException("Thread should hold the project lock for " + owningProject);
-            } else {
-                transformer.isolateParameters(fingerprinterRegistry);
-            }
+            transformer.isolateParameters(fingerprinterRegistry);
         }
     }
 
@@ -183,5 +159,34 @@ public class TransformationStep implements Transformation, TaskDependencyContain
             context.add(isolateAction);
         }
         transformer.visitDependencies(context);
+    }
+
+    public static class IsolateTransformerParametersNode implements WorkNodeAction {
+        private final TransformationStep transformationStep;
+
+        public IsolateTransformerParametersNode(TransformationStep transformationStep) {
+            this.transformationStep = transformationStep;
+        }
+
+        public TransformationStep getTransformationStep() {
+            return transformationStep;
+        }
+
+        @Override
+        public String toString() {
+            return "isolate parameters of transform " + transformationStep.transformer.getDisplayName();
+        }
+
+        @Nullable
+        @Override
+        public Project getProject() {
+            return transformationStep.owningProject;
+        }
+
+        @Override
+        public void run(NodeExecutionContext context) {
+            FileCollectionFingerprinterRegistry fingerprinterRegistry = context.getService(FileCollectionFingerprinterRegistry.class);
+            transformationStep.isolateTransformerParameters(fingerprinterRegistry);
+        }
     }
 }

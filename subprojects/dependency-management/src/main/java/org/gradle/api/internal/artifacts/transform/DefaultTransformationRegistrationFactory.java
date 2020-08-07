@@ -155,6 +155,7 @@ public class DefaultTransformationRegistrationFactory implements TransformationR
             fileLookup,
             parametersPropertyWalker,
             actionInstantiationScheme,
+            owner.getModel(),
             internalServices);
 
         return new DefaultArtifactTransformRegistration(from, to, new TransformationStep(transformer, transformerInvocationFactory, owner, fileCollectionFingerprinterRegistry));
