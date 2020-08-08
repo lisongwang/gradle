@@ -22,11 +22,11 @@ import org.gradle.api.internal.GradleInternal;
 import org.gradle.api.internal.SettingsInternal;
 import org.gradle.initialization.IncludedBuildSpec;
 import org.gradle.initialization.SettingsLoader;
+import org.gradle.initialization.definition.InjectedPluginResolver;
 import org.gradle.internal.build.BuildStateRegistry;
 import org.gradle.internal.build.IncludedBuildState;
 import org.gradle.internal.build.PublicBuildPath;
 import org.gradle.internal.reflect.Instantiator;
-import org.gradle.plugin.management.internal.PluginRequests;
 
 import java.util.Collections;
 import java.util.LinkedHashSet;
@@ -53,6 +53,7 @@ public class ChildBuildRegisteringSettingsLoader implements SettingsLoader {
 
         // Add included builds defined in settings
         List<IncludedBuildSpec> includedBuilds = settings.getIncludedBuilds();
+        InjectedPluginResolver resolver = new InjectedPluginResolver();
         if (!includedBuilds.isEmpty()) {
             Set<IncludedBuild> children = new LinkedHashSet<IncludedBuild>(includedBuilds.size());
             for (IncludedBuildSpec includedBuildSpec : includedBuilds) {
@@ -60,12 +61,11 @@ public class ChildBuildRegisteringSettingsLoader implements SettingsLoader {
 
                 DefaultConfigurableIncludedBuild configurable = instantiator.newInstance(DefaultConfigurableIncludedBuild.class, includedBuildSpec.rootDir);
                 includedBuildSpec.configurer.execute(configurable);
-
                 BuildDefinition buildDefinition = BuildDefinition.fromStartParameterForBuild(
                     gradle.getStartParameter(),
                     configurable.getName(),
                     includedBuildSpec.rootDir,
-                    PluginRequests.EMPTY,
+                    resolver.resolveAll(configurable.getInjectedPlugins()),
                     configurable.getDependencySubstitutionAction(),
                     publicBuildPath
                 );

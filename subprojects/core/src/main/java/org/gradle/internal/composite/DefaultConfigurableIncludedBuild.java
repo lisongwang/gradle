@@ -20,16 +20,21 @@ import com.google.common.base.Preconditions;
 import org.gradle.api.Action;
 import org.gradle.api.artifacts.DependencySubstitutions;
 import org.gradle.api.initialization.ConfigurableIncludedBuild;
+import org.gradle.api.initialization.definition.InjectedPluginDependencies;
 import org.gradle.api.tasks.TaskReference;
+import org.gradle.initialization.definition.DefaultInjectedPluginDependencies;
+import org.gradle.initialization.definition.DefaultInjectedPluginDependency;
 import org.gradle.internal.ImmutableActionSet;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
+import java.util.List;
 
 public class DefaultConfigurableIncludedBuild implements ConfigurableIncludedBuild {
 
     private final File projectDir;
+    private final DefaultInjectedPluginDependencies pluginDependencies = new DefaultInjectedPluginDependencies();
 
     private String name;
     private ImmutableActionSet<DependencySubstitutions> dependencySubstitutionActions = ImmutableActionSet.empty();
@@ -71,5 +76,14 @@ public class DefaultConfigurableIncludedBuild implements ConfigurableIncludedBui
 
     public Action<DependencySubstitutions> getDependencySubstitutionAction() {
         return dependencySubstitutionActions;
+    }
+
+    @Override
+    public void plugins(Action<? super InjectedPluginDependencies> configuration) {
+        configuration.execute(pluginDependencies);
+    }
+
+    public List<DefaultInjectedPluginDependency> getInjectedPlugins() {
+        return pluginDependencies.getDependencies();
     }
 }

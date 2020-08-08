@@ -83,7 +83,10 @@ public abstract class DefaultSettings extends AbstractPluginAware implements Set
         services = serviceRegistryFactory.createFor(this);
         rootProjectDescriptor = createProjectDescriptor(null, settingsDir.getName(), settingsDir);
         if (getBuildSrcDir().exists()) {
-            includeBuild(BUILD_SRC);
+            // TODO: Disallow someone from adding buildSrc explicitly for now
+            includeBuild(BUILD_SRC, buildSrc -> {
+                buildSrc.plugins(injectedPluginDependencies -> injectedPluginDependencies.id("org.gradle.buildsrc"));
+            });
         }
     }
 
