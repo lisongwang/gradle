@@ -1875,6 +1875,10 @@ public class DefaultConfiguration extends AbstractFileCollection implements Conf
         }
 
         @Override
+        public void visitDependencies(TaskDependencyResolveContext context) {
+        }
+
+        @Override
         public void run(NodeExecutionContext context) {
             configuration.resolveExclusively(ARTIFACTS_RESOLVED);
         }

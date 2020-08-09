@@ -219,7 +219,7 @@ public class DefaultTransformer extends AbstractTransformer<TransformAction<?>> 
                 return doIsolateParameters(fingerprinterRegistry);
             });
         } catch (Exception e) {
-            throw new VariantTransformConfigurationException(String.format("Cannot isolate parameters %s of artifact transform %s", parameterObject, ModelType.of(getImplementationClass()).getDisplayName()), e);
+            throw new VariantTransformConfigurationException(String.format("Cannot isolate parameters of artifact transform %s", ModelType.of(getImplementationClass()).getDisplayName()), e);
         }
     }
 

@@ -184,6 +184,11 @@ public class TransformationStep implements Transformation, TaskDependencyContain
         }
 
         @Override
+        public void visitDependencies(TaskDependencyResolveContext context) {
+            transformationStep.transformer.visitDependencies(context);
+        }
+
+        @Override
         public void run(NodeExecutionContext context) {
             FileCollectionFingerprinterRegistry fingerprinterRegistry = context.getService(FileCollectionFingerprinterRegistry.class);
             transformationStep.isolateTransformerParameters(fingerprinterRegistry);

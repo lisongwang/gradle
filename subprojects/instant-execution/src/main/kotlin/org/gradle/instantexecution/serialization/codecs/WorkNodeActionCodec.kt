@@ -19,6 +19,7 @@ package org.gradle.instantexecution.serialization.codecs
 import org.gradle.api.Project
 import org.gradle.api.internal.artifacts.configurations.DefaultConfiguration
 import org.gradle.api.internal.tasks.NodeExecutionContext
+import org.gradle.api.internal.tasks.TaskDependencyResolveContext
 import org.gradle.api.internal.tasks.WorkNodeAction
 import org.gradle.instantexecution.serialization.Codec
 import org.gradle.instantexecution.serialization.ReadContext
@@ -39,12 +40,15 @@ object WorkNodeActionCodec : Codec<WorkNodeAction> {
     override suspend fun ReadContext.decode(): WorkNodeAction {
         // TODO - should discard from graph instead
         return object : WorkNodeAction {
-            override fun run(context: NodeExecutionContext) {
-                // Ignore
-            }
-
             override fun getProject(): Project? {
                 return null
+            }
+
+            override fun visitDependencies(context: TaskDependencyResolveContext) {
+            }
+
+            override fun run(context: NodeExecutionContext) {
+                // Ignore
             }
         }
     }
