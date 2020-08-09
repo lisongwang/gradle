@@ -58,6 +58,7 @@ import org.gradle.internal.instantiation.InstantiationScheme;
 import org.gradle.internal.isolated.IsolationScheme;
 import org.gradle.internal.isolation.Isolatable;
 import org.gradle.internal.isolation.IsolatableFactory;
+import org.gradle.internal.logging.text.TreeFormatter;
 import org.gradle.internal.model.CalculatedModelValue;
 import org.gradle.internal.model.ModelContainer;
 import org.gradle.internal.operations.BuildOperationContext;
@@ -219,7 +220,9 @@ public class DefaultTransformer extends AbstractTransformer<TransformAction<?>> 
                 return doIsolateParameters(fingerprinterRegistry);
             });
         } catch (Exception e) {
-            throw new VariantTransformConfigurationException(String.format("Cannot isolate parameters of artifact transform %s", ModelType.of(getImplementationClass()).getDisplayName()), e);
+            TreeFormatter formatter = new TreeFormatter();
+            formatter.node("Could not isolate parameters ").appendValue(parameterObject).append(" of artifact transform ").appendType(getImplementationClass());
+            throw new VariantTransformConfigurationException(formatter.toString(), e);
         }
     }
 

@@ -617,16 +617,17 @@ public class DefaultConfiguration extends AbstractFileCollection implements Conf
                 DefaultResolverResults results = new DefaultResolverResults();
                 resolver.resolveGraph(DefaultConfiguration.this, results);
                 dependenciesModified = false;
+
                 ResolveState newState = new GraphResolved(results);
+
+                // Make the new state visible in case a dependency resolution listener queries the result, which requires the new state
+                currentResolveState.set(newState);
 
                 // Mark all affected configurations as observed
                 markParentsObserved(requestedState);
                 markReferencedProjectConfigurationsObserved(requestedState, results);
 
                 if (!newState.hasError()) {
-                    // Make the new state visible in case a dependency resolution listener queries the result, which requires the new state
-                    currentResolveState.set(newState);
-
                     dependencyResolutionListeners.getSource().afterResolve(incoming);
                     // Discard listeners
                     dependencyResolutionListeners.removeAll();
