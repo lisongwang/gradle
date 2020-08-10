@@ -176,15 +176,66 @@ class DefaultProjectStateRegistryTest extends ConcurrentSpec {
         given:
         def build = build("p1", "p2")
         registry.registerProjects(build)
+        def state = registry.stateFor(project("p1"))
 
         expect:
-        !registry.stateFor(project("p1")).hasMutableState()
+        !state.hasMutableState()
 
         and:
-        registry.withLenientState({ assert registry.stateFor(project("p1")).hasMutableState() })
+        registry.withMutableStateOfAllProjects {
+            assert state.hasMutableState()
+        }
 
         and:
-        !registry.stateFor(project("p1")).hasMutableState()
+        !state.hasMutableState()
+    }
+
+    def "cannot lock projects state while another thread has locked all projects"() {
+        given:
+        def build = build("p1", "p2")
+        registry.registerProjects(build)
+
+        when:
+        async {
+            start {
+                registry.withMutableStateOfAllProjects {
+                    instant.start
+                    thread.block()
+                }
+            }
+            start {
+                thread.blockUntil.start
+                registry.withMutableStateOfAllProjects {
+                }
+            }
+        }
+
+        then:
+        thrown(IllegalStateException)
+    }
+
+    def "cannot lock project state while another thread has locked all projects"() {
+        given:
+        def build = build("p1", "p2")
+        registry.registerProjects(build)
+
+        when:
+        async {
+            start {
+                registry.withMutableStateOfAllProjects {
+                    instant.start
+                    thread.block()
+                }
+            }
+            start {
+                thread.blockUntil.start
+                registry.stateFor(project("p1")).withMutableState {
+                }
+            }
+        }
+
+        then:
+        thrown(IllegalStateException)
     }
 
     def "thread must own project state in order to set calculated value"() {
