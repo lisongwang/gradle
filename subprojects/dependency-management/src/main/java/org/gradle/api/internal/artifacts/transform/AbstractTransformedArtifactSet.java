@@ -69,6 +69,9 @@ public abstract class AbstractTransformedArtifactSet implements ResolvedArtifact
 
     @Override
     public Completion startVisit(BuildOperationQueue<RunnableBuildOperation> actions, AsyncArtifactListener listener) {
+        // Isolate the transformation parameters, if not already done
+        transformation.isolateParameters();
+
         FileCollectionStructureVisitor.VisitType visitType = listener.prepareForVisit(this);
         if (visitType == FileCollectionStructureVisitor.VisitType.NoContents) {
             return visitor -> visitor.endVisitCollection(this);
